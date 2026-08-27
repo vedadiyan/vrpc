@@ -52,11 +52,11 @@ func Encode(contentType string, in any) ([]byte, error) {
 	switch strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])) {
 	case "application/json":
 		{
-			return json.Marshal(&in)
+			return json.Marshal(in)
 		}
 	case "application/protobuf":
 		{
-			r, ok := any(&in).(codecs.Reflected)
+			r, ok := any(in).(codecs.Reflected)
 			if !ok {
 				return nil, ErrIncompatibleCodec
 			}
@@ -64,7 +64,7 @@ func Encode(contentType string, in any) ([]byte, error) {
 		}
 	case "text/toon":
 		{
-			return toon.Marshal(&in)
+			return toon.Marshal(in)
 		}
 	default:
 		{
