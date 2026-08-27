@@ -10,12 +10,27 @@ import (
 	"github.com/vedadiyan/vedio"
 )
 
-func CreateHandler[T any, R any](serviceName string, method string, pattern vapor.Pattern) (vapor.Pattern, func(vapor.Request) vapor.Response) {
+type (
+	handlerOptions struct {
+		serviceName string
+		method      string
+	}
+
+	HandlerOption func(*handlerOptions)
+)
+
+func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts ...HandlerOption) (vapor.Pattern, func(vapor.Request) vapor.Response) {
 	px, err := CreateProxy(serviceName, reflect.TypeFor[T](), reflect.TypeFor[R]())
 	if err != nil {
 		return "", nil
 	}
-	vedio.RegisterFor[func(vapor.Request) vapor.Response, func(vapor.Request) vapor.Response](vedio.WithName(fmt.Sprintf("%s.%s", serviceName, strings.ToLower(method))), vedio.WithGenerator(func() (func(vapor.Request) vapor.Response, error) {
+	handlerOptions := &handlerOptions{
+		serviceName: strings.ToLower(serviceName),
+	}
+	for _, opt := range opts {
+		opt(handlerOptions)
+	}
+	vedio.RegisterFor[func(vapor.Request) vapor.Response, func(vapor.Request) vapor.Response](vedio.WithName(handlerOptions.GetFullServiceName()), vedio.WithGenerator(func() (func(vapor.Request) vapor.Response, error) {
 		return func(r vapor.Request) vapor.Response {
 			i, err := io.ReadAll(r.Content())
 			if err != nil {
@@ -37,7 +52,7 @@ func CreateHandler[T any, R any](serviceName string, method string, pattern vapo
 		}, nil
 	}))
 	return pattern, func(r vapor.Request) vapor.Response {
-		fn, err := vedio.Resolve[func(vapor.Request) vapor.Response](vedio.WithName(fmt.Sprintf("%s.%s", serviceName, strings.ToLower(r.Method()))))
+		fn, err := vedio.Resolve[func(vapor.Request) vapor.Response](vedio.WithName(handlerOptions.GetFullServiceName()))
 		if err != nil {
 			return ToError(serviceName, err)
 		}
@@ -51,4 +66,11 @@ func ToError(serviceName string, err error) vapor.Response {
 		vapor.WithHeaders(vapor.KeyValue{"Content-Type": {"text/plain"}}),
 		vapor.WithContent([]byte(err.Error())),
 	)
+}
+
+func (h *handlerOptions) GetFullServiceName() string {
+	if len(h.method) == 0 {
+		return h.serviceName
+	}
+	return fmt.Sprintf("%s.%s", h.serviceName, h.method)
 }
