@@ -2,12 +2,16 @@ package vrpc
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/toon-format/toon-go"
 	"github.com/vedadiyan/protolizer"
 	"github.com/vedadiyan/protolizer/codecs"
+)
+
+const (
+	ErrIncompatibleCodec      Error = "incompatible protobuffer codec detected"
+	ErrContentTypeUnspecified Error = "content type unspecified"
 )
 
 func Decode[T any](contentType string, in []byte) (*T, error) {
@@ -24,7 +28,7 @@ func Decode[T any](contentType string, in []byte) (*T, error) {
 		{
 			r, ok := any(&zero).(codecs.Reflected)
 			if !ok {
-				return nil, fmt.Errorf("incompatible protobuffer codec detected")
+				return nil, ErrIncompatibleCodec
 			}
 			if err := protolizer.StaticCodec().Unmarshal(in, r); err != nil {
 				return nil, err
@@ -40,7 +44,7 @@ func Decode[T any](contentType string, in []byte) (*T, error) {
 		}
 	default:
 		{
-			return nil, fmt.Errorf("content type unspecified")
+			return nil, ErrContentTypeUnspecified
 		}
 	}
 }
@@ -55,7 +59,7 @@ func Encode[T any](contentType string, in T) ([]byte, error) {
 		{
 			r, ok := any(&in).(codecs.Reflected)
 			if !ok {
-				return nil, fmt.Errorf("incompatible protobuffer codec detected")
+				return nil, ErrIncompatibleCodec
 			}
 			return protolizer.StaticCodec().Marshal(r)
 		}
@@ -65,7 +69,7 @@ func Encode[T any](contentType string, in T) ([]byte, error) {
 		}
 	default:
 		{
-			return nil, fmt.Errorf("content type unspecified")
+			return nil, ErrContentTypeUnspecified
 		}
 	}
 }
