@@ -6,6 +6,7 @@ require (
 	github.com/toon-format/toon-go v0.0.0-20251202084852-7ca0e27c4e8c
 	github.com/vedadiyan/automapper v0.0.2-nightly27082025105200
 	github.com/vedadiyan/protolizer v0.0.1
+	github.com/vedadiyan/vapor v0.0.1-nightly26082026180900
 	github.com/vedadiyan/vedio v0.0.2-nightly082320262001
 )
 

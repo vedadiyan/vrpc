@@ -6,5 +6,7 @@ github.com/vedadiyan/automapper v0.0.2-nightly27082025105200 h1:vv5KeTqxK0nWut6r
 github.com/vedadiyan/automapper v0.0.2-nightly27082025105200/go.mod h1:l8F8w8T5GUZmh9VIWEsAexAyqs3b+2y10hxkWI07K+M=
 github.com/vedadiyan/protolizer v0.0.1 h1:GFqMkZ2nMvcnpHmc1JBEU8YsMOJhwHJuvgwYZ2OayJU=
 github.com/vedadiyan/protolizer v0.0.1/go.mod h1:iRyzONBUGeBynKk3MgxqCzRVOJLBB4sZmUgdIuQlvDQ=
+github.com/vedadiyan/vapor v0.0.1-nightly26082026180900 h1:G1AX/8gtXpOoJ5q31pPZw48/km9fBCty6i2of2fRUNk=
+github.com/vedadiyan/vapor v0.0.1-nightly26082026180900/go.mod h1:F1pHzuUl/rs7vgBE9r10cbyWCnJFPVHT2yEJrS18sRY=
 github.com/vedadiyan/vedio v0.0.2-nightly082320262001 h1:OzWT9mDfzG87H3qdxzArjXODM/8z6WarrqLB0Y22fK4=
 github.com/vedadiyan/vedio v0.0.2-nightly082320262001/go.mod h1:a3UecyTGk547Qf1MTROqypGadRx/NSmfEQtD9vGBYso=
