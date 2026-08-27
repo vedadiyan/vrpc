@@ -14,16 +14,22 @@ const (
 	ErrContentTypeUnspecified Error = "content type unspecified"
 )
 
+const (
+	MimeTypeApplicationJson     = "application/json"
+	MimeTypeApplicationProtobuf = "application/protobuf"
+	MimeTypeTextToon            = "text/toon"
+)
+
 func Decode(contentType string, in []byte, v any) error {
-	switch strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])) {
-	case "application/json":
+	switch GetMimeType(contentType) {
+	case MimeTypeApplicationJson:
 		{
 			if err := json.Unmarshal(in, v); err != nil {
 				return err
 			}
 			return nil
 		}
-	case "application/protobuf":
+	case MimeTypeApplicationProtobuf:
 		{
 			r, ok := any(v).(codecs.Reflected)
 			if !ok {
@@ -34,7 +40,7 @@ func Decode(contentType string, in []byte, v any) error {
 			}
 			return nil
 		}
-	case "text/toon":
+	case MimeTypeTextToon:
 		{
 			if err := toon.Unmarshal(in, v); err != nil {
 				return err
@@ -49,12 +55,12 @@ func Decode(contentType string, in []byte, v any) error {
 }
 
 func Encode(contentType string, in any) ([]byte, error) {
-	switch strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])) {
-	case "application/json":
+	switch GetMimeType(contentType) {
+	case MimeTypeApplicationJson:
 		{
 			return json.Marshal(in)
 		}
-	case "application/protobuf":
+	case MimeTypeApplicationProtobuf:
 		{
 			r, ok := any(in).(codecs.Reflected)
 			if !ok {
@@ -62,7 +68,7 @@ func Encode(contentType string, in any) ([]byte, error) {
 			}
 			return protolizer.StaticCodec().Marshal(r)
 		}
-	case "text/toon":
+	case MimeTypeTextToon:
 		{
 			return toon.Marshal(in)
 		}
@@ -71,4 +77,8 @@ func Encode(contentType string, in any) ([]byte, error) {
 			return nil, ErrContentTypeUnspecified
 		}
 	}
+}
+
+func GetMimeType(value string) string {
+	return strings.ToLower(strings.TrimSpace(strings.SplitN(value, ";", 2)[0]))
 }
