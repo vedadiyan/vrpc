@@ -1,0 +1,10 @@
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/toon-format/toon-go v0.0.0-20251202084852-7ca0e27c4e8c h1:D8lDFovBMZywze1eh9iwMLcYor5f11mHBocLhO7cBe8=
+github.com/toon-format/toon-go v0.0.0-20251202084852-7ca0e27c4e8c/go.mod h1:j/BOnpF2ihnz4lELs99h9mwGJBx/zdleOUCnLLRPCsc=
+github.com/vedadiyan/automapper v0.0.2-nightly27082025105200 h1:vv5KeTqxK0nWut6r+48ynhh/aDklCSGYqOddEzrmLds=
+github.com/vedadiyan/automapper v0.0.2-nightly27082025105200/go.mod h1:l8F8w8T5GUZmh9VIWEsAexAyqs3b+2y10hxkWI07K+M=
+github.com/vedadiyan/protolizer v0.0.1 h1:GFqMkZ2nMvcnpHmc1JBEU8YsMOJhwHJuvgwYZ2OayJU=
+github.com/vedadiyan/protolizer v0.0.1/go.mod h1:iRyzONBUGeBynKk3MgxqCzRVOJLBB4sZmUgdIuQlvDQ=
+github.com/vedadiyan/vedio v0.0.2-nightly082320262001 h1:OzWT9mDfzG87H3qdxzArjXODM/8z6WarrqLB0Y22fK4=
+github.com/vedadiyan/vedio v0.0.2-nightly082320262001/go.mod h1:a3UecyTGk547Qf1MTROqypGadRx/NSmfEQtD9vGBYso=
