@@ -20,6 +20,10 @@ type (
 	}
 
 	HandlerOption func(*handlerOptions)
+
+	RegisterFunc func() (vapor.Pattern, func(vapor.Request) vapor.Response)
+
+	HandlerFunc = func(vapor.Request) vapor.Response
 )
 
 var (
@@ -33,12 +37,7 @@ const (
 	MimeTypeTextPlain = "text/plain"
 )
 
-func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts ...HandlerOption) (func() (vapor.Pattern, func(vapor.Request) vapor.Response), error) {
-	px, err := CreateProxy(serviceName, reflect.TypeFor[T](), reflect.TypeFor[R]())
-	if err != nil {
-		return nil, err
-	}
-
+func RegisterHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts ...HandlerOption) error {
 	handlerOptions := &handlerOptions{
 		successCode: 200,
 	}
@@ -46,47 +45,64 @@ func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts
 		opt(handlerOptions)
 	}
 
-	generator := func() (func(vapor.Request) vapor.Response, error) {
-		return func(r vapor.Request) vapor.Response {
+	px, err := CreateProxy(serviceName, reflect.TypeFor[T](), reflect.TypeFor[R]())
+	if err != nil {
+		return err
+	}
+
+	fullServiceNameStatic := GetFullServiceName(serviceName, handlerOptions.method)
+
+	generator := createGenerator[T, R](px, handlerOptions)
+
+	if err := vedio.Register[HandlerFunc](
+		vedio.WithName(fullServiceNameStatic), vedio.WithGenerator(generator)); err != nil {
+		return err
+	}
+
+	registerFunc := func() (vapor.Pattern, func(r vapor.Request) vapor.Response) {
+		return pattern, func(r vapor.Request) vapor.Response {
+			fullServiceName := GetFullServiceName(serviceName, handlerOptions.method)
+			fn, err := vedio.Resolve[HandlerFunc](vedio.WithName(fullServiceName))
+			if err != nil {
+				return vapor.NewResponse(
+					500,
+					vapor.WithHeaders(vapor.KeyValue{HeaderContentType: {MimeTypeTextPlain}}),
+					vapor.WithContent([]byte(err.Error())),
+				)
+			}
+			return fn(r)
+		}
+	}
+
+	_, _ = handlers.LoadOrStore(strings.ToLower(serviceName), registerFunc)
+
+	return nil
+}
+
+func createGenerator[T any, R any](px func(in any) (any, error), handleroptions *handlerOptions) func() (func(vapor.Request) vapor.Response, error) {
+	return func() (func(r vapor.Request) vapor.Response, error) {
+		fn := func(r vapor.Request) vapor.Response {
 			i, err := io.ReadAll(r.Content())
 			if err != nil {
-				return ToError(handlerOptions.errCodes, err)
+				return ToError(handleroptions.errCodes, err)
 			}
 			var req T
 			if err := Decode(r.Headers().Get(HeaderContentType), i, &req); err != nil {
-				return ToError(handlerOptions.errCodes, err)
+				return ToError(handleroptions.errCodes, err)
 			}
 			res, err := px(req)
 			if err != nil {
-				return ToError(handlerOptions.errCodes, err)
+				return ToError(handleroptions.errCodes, err)
 			}
 			o, err := Encode(r.Headers().Get(HeaderAccept), res)
 			if err != nil {
-				return ToError(handlerOptions.errCodes, err)
+				return ToError(handleroptions.errCodes, err)
 			}
-			return vapor.NewResponse(handlerOptions.successCode, vapor.WithContent(o))
-		}, nil
-	}
-
-	if err := vedio.Register[func(vapor.Request) vapor.Response](vedio.WithName(GetFullServiceName(serviceName, handlerOptions.method)), vedio.WithGenerator(generator)); err != nil {
-		return nil, err
-	}
-
-	value, _ := handlers.LoadOrStore(strings.ToLower(serviceName), func(r vapor.Request) vapor.Response {
-		fn, err := vedio.Resolve[func(vapor.Request) vapor.Response](vedio.WithName(GetFullServiceName(serviceName, r.Method())))
-		if err != nil {
-			return vapor.NewResponse(
-				500,
-				vapor.WithHeaders(vapor.KeyValue{HeaderContentType: {MimeTypeTextPlain}}),
-				vapor.WithContent([]byte(err.Error())),
-			)
+			return vapor.NewResponse(handleroptions.successCode, vapor.WithContent(o))
 		}
-		return fn(r)
-	})
+		return fn, nil
+	}
 
-	return func() (vapor.Pattern, func(vapor.Request) vapor.Response) {
-		return pattern, value.(func(vapor.Request) vapor.Response)
-	}, nil
 }
 
 func ToError(errCodes map[string]int, err error) vapor.Response {
