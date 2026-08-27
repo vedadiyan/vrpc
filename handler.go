@@ -12,25 +12,22 @@ import (
 
 type (
 	handlerOptions struct {
-		serviceName string
-		method      string
+		method string
 	}
 
 	HandlerOption func(*handlerOptions)
 )
 
-func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts ...HandlerOption) (vapor.Pattern, func(vapor.Request) vapor.Response) {
+func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts ...HandlerOption) (func() (vapor.Pattern, func(vapor.Request) vapor.Response), error) {
 	px, err := CreateProxy(serviceName, reflect.TypeFor[T](), reflect.TypeFor[R]())
 	if err != nil {
-		return "", nil
+		return nil, err
 	}
-	handlerOptions := &handlerOptions{
-		serviceName: strings.ToLower(serviceName),
-	}
+	handlerOptions := &handlerOptions{}
 	for _, opt := range opts {
 		opt(handlerOptions)
 	}
-	vedio.RegisterFor[func(vapor.Request) vapor.Response, func(vapor.Request) vapor.Response](vedio.WithName(handlerOptions.GetFullServiceName()), vedio.WithGenerator(func() (func(vapor.Request) vapor.Response, error) {
+	vedio.RegisterFor[func(vapor.Request) vapor.Response, func(vapor.Request) vapor.Response](vedio.WithName(GetFullServiceName(serviceName, handlerOptions.method)), vedio.WithGenerator(func() (func(vapor.Request) vapor.Response, error) {
 		return func(r vapor.Request) vapor.Response {
 			i, err := io.ReadAll(r.Content())
 			if err != nil {
@@ -51,13 +48,18 @@ func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts
 			return vapor.NewResponse(MapSuccessCode(serviceName), vapor.WithContent(o))
 		}, nil
 	}))
-	return pattern, func(r vapor.Request) vapor.Response {
-		fn, err := vedio.Resolve[func(vapor.Request) vapor.Response](vedio.WithName(handlerOptions.GetFullServiceName()))
+
+	handler := func(r vapor.Request) vapor.Response {
+		fn, err := vedio.Resolve[func(vapor.Request) vapor.Response](vedio.WithName(GetFullServiceName(serviceName, r.Method())))
 		if err != nil {
 			return ToError(serviceName, err)
 		}
 		return fn(r)
 	}
+
+	return func() (vapor.Pattern, func(vapor.Request) vapor.Response) {
+		return pattern, handler
+	}, nil
 }
 
 func ToError(serviceName string, err error) vapor.Response {
@@ -68,9 +70,9 @@ func ToError(serviceName string, err error) vapor.Response {
 	)
 }
 
-func (h *handlerOptions) GetFullServiceName() string {
-	if len(h.method) == 0 {
-		return h.serviceName
+func GetFullServiceName(serviceName string, method string) string {
+	if len(method) == 0 {
+		return serviceName
 	}
-	return fmt.Sprintf("%s.%s", h.serviceName, h.method)
+	return fmt.Sprintf("%s.%s", strings.ToLower(serviceName), strings.ToLower(method))
 }
