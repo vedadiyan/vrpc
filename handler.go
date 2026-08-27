@@ -28,6 +28,9 @@ var (
 
 const (
 	HeaderContentType = "Content-Type"
+	HeaderAccept      = "Accept"
+
+	MimeTypeTextPlain = "text/plain"
 )
 
 func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts ...HandlerOption) (func() (vapor.Pattern, func(vapor.Request) vapor.Response), error) {
@@ -57,7 +60,7 @@ func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts
 			if err != nil {
 				return ToError(handlerOptions.errCodes, err)
 			}
-			o, err := Encode(r.Headers().Get("Accept"), res)
+			o, err := Encode(r.Headers().Get(HeaderAccept), res)
 			if err != nil {
 				return ToError(handlerOptions.errCodes, err)
 			}
@@ -74,7 +77,7 @@ func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts
 		if err != nil {
 			return vapor.NewResponse(
 				500,
-				vapor.WithHeaders(vapor.KeyValue{HeaderContentType: {"text/plain"}}),
+				vapor.WithHeaders(vapor.KeyValue{HeaderContentType: {MimeTypeTextPlain}}),
 				vapor.WithContent([]byte(err.Error())),
 			)
 		}
@@ -96,7 +99,7 @@ func ToError(errCodes map[string]int, err error) vapor.Response {
 	}
 	return vapor.NewResponse(
 		errCode,
-		vapor.WithHeaders(vapor.KeyValue{HeaderContentType: {"text/plain"}}),
+		vapor.WithHeaders(vapor.KeyValue{HeaderContentType: {MimeTypeTextPlain}}),
 		vapor.WithContent([]byte(err.Error())),
 	)
 }
