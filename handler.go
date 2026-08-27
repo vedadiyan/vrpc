@@ -7,12 +7,12 @@ import (
 	"github.com/vedadiyan/vapor"
 )
 
-func CreateHandler[T any, R any](serviceName string) func(vapor.Pattern, vapor.Request) vapor.Response {
+func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern) (vapor.Pattern, func(vapor.Request) vapor.Response) {
 	px, err := CreateProxy(serviceName, reflect.TypeFor[T](), reflect.TypeFor[R]())
 	if err != nil {
-		return nil
+		return "", nil
 	}
-	return func(p vapor.Pattern, r vapor.Request) vapor.Response {
+	return pattern, func(r vapor.Request) vapor.Response {
 		i, err := io.ReadAll(r.Content())
 		if err != nil {
 			return ToError(serviceName, err)
