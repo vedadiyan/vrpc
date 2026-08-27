@@ -1,6 +1,7 @@
 package vrpc
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -13,7 +14,9 @@ import (
 
 type (
 	handlerOptions struct {
-		method string
+		method      string
+		errCodes    map[string]int
+		successCode int
 	}
 
 	HandlerOption func(*handlerOptions)
@@ -23,13 +26,19 @@ var (
 	handlers sync.Map
 )
 
+const (
+	HeaderContentType = "Content-Type"
+)
+
 func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts ...HandlerOption) (func() (vapor.Pattern, func(vapor.Request) vapor.Response), error) {
 	px, err := CreateProxy(serviceName, reflect.TypeFor[T](), reflect.TypeFor[R]())
 	if err != nil {
 		return nil, err
 	}
 
-	handlerOptions := &handlerOptions{}
+	handlerOptions := &handlerOptions{
+		successCode: 200,
+	}
 	for _, opt := range opts {
 		opt(handlerOptions)
 	}
@@ -38,21 +47,21 @@ func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts
 		return func(r vapor.Request) vapor.Response {
 			i, err := io.ReadAll(r.Content())
 			if err != nil {
-				return ToError(serviceName, err)
+				return ToError(handlerOptions.errCodes, err)
 			}
 			var req T
-			if err := Decode(r.Headers().Get("Content-Type"), i, &req); err != nil {
-				return ToError(serviceName, err)
+			if err := Decode(r.Headers().Get(HeaderContentType), i, &req); err != nil {
+				return ToError(handlerOptions.errCodes, err)
 			}
 			res, err := px(req)
 			if err != nil {
-				return ToError(serviceName, err)
+				return ToError(handlerOptions.errCodes, err)
 			}
 			o, err := Encode(r.Headers().Get("Accept"), res)
 			if err != nil {
-				return ToError(serviceName, err)
+				return ToError(handlerOptions.errCodes, err)
 			}
-			return vapor.NewResponse(MapSuccessCode(serviceName), vapor.WithContent(o))
+			return vapor.NewResponse(handlerOptions.successCode, vapor.WithContent(o))
 		}, nil
 	}
 
@@ -60,10 +69,14 @@ func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts
 		return nil, err
 	}
 
-	value, _ := handlers.LoadOrStore(serviceName, func(r vapor.Request) vapor.Response {
+	value, _ := handlers.LoadOrStore(strings.ToLower(serviceName), func(r vapor.Request) vapor.Response {
 		fn, err := vedio.Resolve[func(vapor.Request) vapor.Response](vedio.WithName(GetFullServiceName(serviceName, r.Method())))
 		if err != nil {
-			return ToError(serviceName, err)
+			return vapor.NewResponse(
+				500,
+				vapor.WithHeaders(vapor.KeyValue{HeaderContentType: {"text/plain"}}),
+				vapor.WithContent([]byte(err.Error())),
+			)
 		}
 		return fn(r)
 	})
@@ -73,17 +86,26 @@ func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts
 	}, nil
 }
 
-func ToError(serviceName string, err error) vapor.Response {
+func ToError(errCodes map[string]int, err error) vapor.Response {
+	errCode := 500
+	var errPattern ErrorPattern
+	if errors.As(err, &errPattern) {
+		if value, ok := errCodes[errPattern.Pattern()]; ok {
+			errCode = value
+		}
+	}
 	return vapor.NewResponse(
-		MapErrorCode(serviceName, err),
-		vapor.WithHeaders(vapor.KeyValue{"Content-Type": {"text/plain"}}),
+		errCode,
+		vapor.WithHeaders(vapor.KeyValue{HeaderContentType: {"text/plain"}}),
 		vapor.WithContent([]byte(err.Error())),
 	)
 }
 
 func GetFullServiceName(serviceName string, method string) string {
+	serviceName = strings.ToLower(serviceName)
+	method = strings.ToLower(method)
 	if len(method) == 0 {
 		return serviceName
 	}
-	return fmt.Sprintf("%s.%s", strings.ToLower(serviceName), strings.ToLower(method))
+	return fmt.Sprintf("%s.%s", serviceName, method)
 }
