@@ -36,8 +36,8 @@ func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts
 			if err != nil {
 				return ToError(serviceName, err)
 			}
-			req, err := Decode[T](r.Headers().Get("Content-Type"), i)
-			if err != nil {
+			var req T
+			if err := Decode(r.Headers().Get("Content-Type"), i, &req); err != nil {
 				return ToError(serviceName, err)
 			}
 			res, err := px(req)

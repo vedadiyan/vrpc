@@ -14,46 +14,45 @@ const (
 	ErrContentTypeUnspecified Error = "content type unspecified"
 )
 
-func Decode[T any](contentType string, in []byte) (*T, error) {
-	var zero T
+func Decode(contentType string, in []byte, v any) error {
 	switch strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])) {
 	case "application/json":
 		{
-			if err := json.Unmarshal(in, &zero); err != nil {
-				return nil, err
+			if err := json.Unmarshal(in, v); err != nil {
+				return err
 			}
-			return &zero, nil
+			return nil
 		}
 	case "application/protobuf":
 		{
-			r, ok := any(&zero).(codecs.Reflected)
+			r, ok := any(v).(codecs.Reflected)
 			if !ok {
-				return nil, ErrIncompatibleCodec
+				return ErrIncompatibleCodec
 			}
 			if err := protolizer.StaticCodec().Unmarshal(in, r); err != nil {
-				return nil, err
+				return err
 			}
-			return &zero, nil
+			return nil
 		}
 	case "text/toon":
 		{
-			if err := toon.Unmarshal(in, &zero); err != nil {
-				return nil, err
+			if err := toon.Unmarshal(in, v); err != nil {
+				return err
 			}
-			return &zero, nil
+			return nil
 		}
 	default:
 		{
-			return nil, ErrContentTypeUnspecified
+			return ErrContentTypeUnspecified
 		}
 	}
 }
 
-func Encode[T any](contentType string, in T) ([]byte, error) {
+func Encode(contentType string, in any) ([]byte, error) {
 	switch strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])) {
 	case "application/json":
 		{
-			return json.Marshal(in)
+			return json.Marshal(&in)
 		}
 	case "application/protobuf":
 		{
@@ -65,7 +64,7 @@ func Encode[T any](contentType string, in T) ([]byte, error) {
 		}
 	case "text/toon":
 		{
-			return toon.Marshal(in)
+			return toon.Marshal(&in)
 		}
 	default:
 		{
