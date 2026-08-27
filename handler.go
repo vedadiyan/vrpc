@@ -5,6 +5,7 @@ import (
 	"io"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/vedadiyan/vapor"
 	"github.com/vedadiyan/vedio"
@@ -18,7 +19,18 @@ type (
 	HandlerOption func(*handlerOptions)
 )
 
+var (
+	handlers sync.Map
+)
+
 func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts ...HandlerOption) (func() (vapor.Pattern, func(vapor.Request) vapor.Response), error) {
+	value, _ := handlers.LoadOrStore(serviceName, func(r vapor.Request) vapor.Response {
+		fn, err := vedio.Resolve[func(vapor.Request) vapor.Response](vedio.WithName(GetFullServiceName(serviceName, r.Method())))
+		if err != nil {
+			return ToError(serviceName, err)
+		}
+		return fn(r)
+	})
 	px, err := CreateProxy(serviceName, reflect.TypeFor[T](), reflect.TypeFor[R]())
 	if err != nil {
 		return nil, err
@@ -48,17 +60,8 @@ func CreateHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts
 			return vapor.NewResponse(MapSuccessCode(serviceName), vapor.WithContent(o))
 		}, nil
 	}))
-
-	handler := func(r vapor.Request) vapor.Response {
-		fn, err := vedio.Resolve[func(vapor.Request) vapor.Response](vedio.WithName(GetFullServiceName(serviceName, r.Method())))
-		if err != nil {
-			return ToError(serviceName, err)
-		}
-		return fn(r)
-	}
-
 	return func() (vapor.Pattern, func(vapor.Request) vapor.Response) {
-		return pattern, handler
+		return pattern, value.(func(vapor.Request) vapor.Response)
 	}, nil
 }
 
