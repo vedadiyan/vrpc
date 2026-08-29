@@ -37,6 +37,18 @@ const (
 	MimeTypeTextPlain = "text/plain"
 )
 
+func WithMethod(method string) HandlerOption {
+	return func(ho *handlerOptions) {
+		ho.method = method
+	}
+}
+
+func WithSuccessCode(successCode int) HandlerOption {
+	return func(ho *handlerOptions) {
+		ho.successCode = successCode
+	}
+}
+
 func RegisterHandler[T any, R any](serviceName string, pattern vapor.Pattern, opts ...HandlerOption) error {
 	handlerOptions := &handlerOptions{
 		successCode: 200,
