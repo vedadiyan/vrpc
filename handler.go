@@ -14,9 +14,11 @@ import (
 
 type (
 	handlerOptions struct {
-		method      string
-		errCodes    map[string]int
-		successCode int
+		method         string
+		errCodes       map[string]int
+		successCode    int
+		streamRequest  bool
+		streamResponse bool
 	}
 
 	HandlerOption func(*handlerOptions)
@@ -46,6 +48,18 @@ func WithMethod(method string) HandlerOption {
 func WithSuccessCode(successCode int) HandlerOption {
 	return func(ho *handlerOptions) {
 		ho.successCode = successCode
+	}
+}
+
+func WithStreamRequest() HandlerOption {
+	return func(ho *handlerOptions) {
+		ho.streamRequest = true
+	}
+}
+
+func WithStreamResponse() HandlerOption {
+	return func(ho *handlerOptions) {
+		ho.streamResponse = true
 	}
 }
 
